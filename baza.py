@@ -19,6 +19,10 @@ def load_data(path):
 
 df = load_data(file_path)
 
+ppgpp_values = pd.to_numeric(df["ppGpp_mean"], errors="coerce").dropna()
+ppgpp_default_min = float(ppgpp_values.min()) if not ppgpp_values.empty else 0.0
+ppgpp_default_max = float(ppgpp_values.max()) if not ppgpp_values.empty else 0.0
+
 FILTER_CONFIG = {
     'filter_instrumentation': 'instrumentation',
     'filter_internal_standard': 'internal_standard',
@@ -28,7 +32,7 @@ FILTER_CONFIG = {
     'filter_organ': 'organ',
     'filter_growth': 'growth_scale',
     'filter_tr1': 'treatment_type1',
-    'filter_trv': 'treatment_value'
+    'filter_tr2': 'treatment_type2'
 }
 
 for key, col in FILTER_CONFIG.items():
@@ -37,12 +41,48 @@ for key, col in FILTER_CONFIG.items():
 
 if "toggle_inducible" not in st.session_state:
     st.session_state["toggle_inducible"] = False
+if "use_ppgpp_min" not in st.session_state:
+    st.session_state["use_ppgpp_min"] = False
+if "use_ppgpp_max" not in st.session_state:
+    st.session_state["use_ppgpp_max"] = False
+if "filter_ppgpp_min" not in st.session_state:
+    st.session_state["filter_ppgpp_min"] = ppgpp_default_min
+if "filter_ppgpp_max" not in st.session_state:
+    st.session_state["filter_ppgpp_max"] = ppgpp_default_max
+
+
+def build_doi_url(value):
+    if pd.isna(value):
+        return None
+
+    doi_value = str(value).strip()
+    if not doi_value:
+        return None
+
+    doi_value_lower = doi_value.lower()
+    if doi_value_lower.startswith(("http://", "https://")):
+        return doi_value
+
+    # Normalize common DOI notations like "doi: 10.xxxx/..." or "doi.org/10.xxxx/..."
+    doi_value = doi_value.replace(" ", "")
+    doi_value_lower = doi_value.lower()
+    if doi_value_lower.startswith("doi:"):
+        doi_value = doi_value[4:]
+    doi_value_lower = doi_value.lower()
+    if doi_value_lower.startswith("doi.org/"):
+        doi_value = doi_value[len("doi.org/"):]
+
+    return f"https://doi.org/{doi_value}"
 
 
 def reset_filters():
     for key, col in FILTER_CONFIG.items():
         st.session_state[key] = sorted(df[col].dropna().unique().tolist())
     st.session_state["toggle_inducible"] = False
+    st.session_state["use_ppgpp_min"] = False
+    st.session_state["use_ppgpp_max"] = False
+    st.session_state["filter_ppgpp_min"] = ppgpp_default_min
+    st.session_state["filter_ppgpp_max"] = ppgpp_default_max
 
 
 with st.sidebar:
@@ -140,7 +180,7 @@ with st.sidebar:
             options=options_istd, 
             key="filter_internal_standard"
         )
-        
+
     with st.expander("Biological Context", expanded=False):
             options_kingdom = sorted(df["kingdom"].dropna().unique().tolist())
             f_kingdom = st.multiselect("Kingdom:", 
@@ -178,10 +218,24 @@ with st.sidebar:
                 options=options_tr1, 
                 key="filter_tr1")
 
-            options_trv = sorted(df["treatment_value"].dropna().unique().tolist())
-            f_trv = st.multiselect("Treatment value:", 
-                options=options_trv, 
-                key="filter_trv")  
+            options_tr2 = sorted(df["treatment_type2"].dropna().unique().tolist())
+            f_tr2 = st.multiselect("Treatment type 2:", 
+                options=options_tr2, 
+                key="filter_tr2")  
+
+    with st.expander("ppGpp Level", expanded=False):
+            st.checkbox("Use minimum level", key="use_ppgpp_min")
+            st.number_input(
+                "Min ppGpp level:",
+                key="filter_ppgpp_min",
+                format="%.4f"
+            )
+            st.checkbox("Use maximum level", key="use_ppgpp_max")
+            st.number_input(
+                "Max ppGpp level:",
+                key="filter_ppgpp_max",
+                format="%.4f"
+            )
 
 
 filters = {
@@ -193,7 +247,7 @@ filters = {
     'organ': f_organ,
     'growth_scale': f_growth,
     'treatment_type1': f_tr1,
-    'treatment_value': f_trv
+    'treatment_type2': f_tr2
 }
 
 mask = pd.Series(True, index=df.index)
@@ -203,6 +257,19 @@ mask = pd.Series(True, index=df.index)
 for col, vals in filters.items():
     if vals:
         mask &= df[col].isin(vals)
+
+ppgpp_mean_numeric = pd.to_numeric(df["ppGpp_mean"], errors="coerce")
+active_min = st.session_state["filter_ppgpp_min"] if st.session_state.get("use_ppgpp_min", False) else None
+active_max = st.session_state["filter_ppgpp_max"] if st.session_state.get("use_ppgpp_max", False) else None
+
+if active_min is not None and active_max is not None and active_min > active_max:
+    active_min, active_max = active_max, active_min
+
+if active_min is not None:
+    mask &= ppgpp_mean_numeric >= active_min
+
+if active_max is not None:
+    mask &= ppgpp_mean_numeric <= active_max
 
 # 3. Apply the Toggle filter LAST
 # This is the "Gatekeeper"
@@ -453,15 +520,16 @@ st.markdown("""
 This database was developed to keep pace with the rapidly expanding body of data regarding ppGpp levels in _Eukaryotes_. Born out of a practical need for a centralized "fast-check" resource, it serves as a hub for researchers to quickly access and contextualize their data.
 It provides a curated collection of measurements extracted from peer-reviewed literature.
 
-**Features:**`
+**Features:**
 - Filter by species, genotype, organ, growth conditions, and treatments
 - Add your own data points temporarily to compare with literature values
 - Download filtered data in CSV format
 - Export forest plot visualization using the camera icon
 
-**Please, note:**`
+**Please, note:**
 - The data is collected from various sources and the conditions may differ significantly. Always refer to the original papers for detailed experimental context and methodologies.
 - In some cases, where raw data was not available, values were estimated from figures using WebPlotDigitizer. These are marked in the dataset (details section) and should be interpreted with caution.
+- The data for **inducible lines** is hidden by default, as they usually show very high ppGpp levels upon induction, which can skew the overall view. You can enable them using the toggle in the sidebar.
 """)
 
 st.markdown('<div class="back-to-top"><a href="#top">↑ Back to Top</a></div>', unsafe_allow_html=True)
@@ -703,13 +771,20 @@ if 'reference_DOI' in df_filtered.columns and not df_filtered.empty:
     )
 
     if not unique_refs.empty:
-        links = []
+        seen_titles = {}
+        link_items = []
         for _, row in unique_refs.iterrows():
-            doi = str(row['reference_DOI']).strip()
-            title = row['citation_short'] if pd.notna(row.get('citation_short')) else doi
-            links.append(f"<a href='https://doi.org/{doi}' target='_blank'>{title}</a>")
-        links_html = " &nbsp;|&nbsp; ".join(links)
-        st.markdown(links_html, unsafe_allow_html=True)
+            doi_url = build_doi_url(row['reference_DOI'])
+            title = row['citation_short'] if pd.notna(row.get('citation_short')) else str(row['reference_DOI']).strip()
+            if doi_url:
+                title_count = seen_titles.get(title, 0)
+                seen_titles[title] = title_count + 1
+                button_title = title if title_count == 0 else f"{title} ({title_count + 1})"
+                link_items.append((button_title, doi_url))
+
+        if link_items:
+            inline_links = " | ".join([f"[{title}]({url})" for title, url in link_items])
+            st.markdown(inline_links)
 
 st.markdown("and the **database**:")
     
