@@ -521,7 +521,8 @@ This database was developed to keep pace with the rapidly expanding body of data
 It provides a curated collection of measurements extracted from peer-reviewed literature.
 
 **Features:**
-- Filter by species, genotype, organ, growth conditions, and treatments
+- Filter by analythical method, species, genotype, organ, growth conditions, treatments, or by ppGpp levels
+- Filter in/out the inducible lines which usually show very high ppGpp levels upon induction (default setting is **OFF**; you can enable them using the toggle in the sidebar)
 - Add your own data points temporarily to compare with literature values
 - Download filtered data in CSV format
 - Export forest plot visualization using the camera icon
@@ -529,7 +530,7 @@ It provides a curated collection of measurements extracted from peer-reviewed li
 **Please, note:**
 - The data is collected from various sources and the conditions may differ significantly. Always refer to the original papers for detailed experimental context and methodologies.
 - In some cases, where raw data was not available, values were estimated from figures using WebPlotDigitizer. These are marked in the dataset (details section) and should be interpreted with caution.
-- The data for **inducible lines** is hidden by default, as they usually show very high ppGpp levels upon induction, which can skew the overall view. You can enable them using the toggle in the sidebar.
+- The database is continuously updated as new data becomes available. If you have relevant data to contribute, please contact us (details below).
 """)
 
 st.markdown('<div class="back-to-top"><a href="#top">↑ Back to Top</a></div>', unsafe_allow_html=True)
@@ -922,7 +923,7 @@ with col1:
 with col2:
     st.markdown("""
     <div class="contact-card">
-        <div class="contact-title">Work with our team</div>
+        <div class="contact-title">Our Team</div>
         <p class="contact-body">
             We are not only creators and maintainers of this database; we are active researchers
             dedicated to advancing the field of ppGpp signaling.       
