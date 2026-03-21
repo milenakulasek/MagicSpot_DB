@@ -752,7 +752,18 @@ st.markdown('<div class="back-to-top"><a href="#top">↑ Back to Top</a></div>',
 
 st.markdown("<div id='Tabular'></div>", unsafe_allow_html=True)
 st.markdown("## Data details")
-st.dataframe(df_filtered)
+cols_to_exclude = ["y_label", "reference_DOI_filled", "doi_label"]
+df_details = df_filtered.drop(columns=cols_to_exclude, errors="ignore")
+
+st.dataframe(df_details, hide_index=True)
+
+csv_data = df_details.to_csv(index=False).encode("utf-8")
+st.download_button(
+    label="Download filtered data (CSV)",
+    data=csv_data,
+    file_name="magicspot_filtered_data.csv",
+    mime="text/csv"
+)
 
 st.markdown('<div class="back-to-top"><a href="#top">↑ Back to Top</a></div>', unsafe_allow_html=True)
 
