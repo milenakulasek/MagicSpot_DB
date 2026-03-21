@@ -228,13 +228,15 @@ with st.sidebar:
             st.number_input(
                 "Min ppGpp level:",
                 key="filter_ppgpp_min",
-                format="%.4f"
+                step=100.0,
+                format="%.2f"
             )
             st.checkbox("Use maximum level", key="use_ppgpp_max")
             st.number_input(
                 "Max ppGpp level:",
                 key="filter_ppgpp_max",
-                format="%.4f"
+                step=100.0,
+                format="%.2f"
             )
 
 
