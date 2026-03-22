@@ -950,6 +950,11 @@ with col2:
             We are open to collaborations, data contributions, and discussions on ppGpp research. Please don't hesitate to reach out if you are interested!
         </p>
     </div>
+    <p style="text-align: center; margin-top: 16px;">
+        <a href="https://www.bio.umk.pl/en/department-of-genetics/staff/" target="_blank" style="color: #0a66c2; text-decoration: none; font-weight: 600;">
+            Visit the website of Department of Genetics, NCU →
+        </a>
+    </p>
     """, unsafe_allow_html=True)
 
 st.markdown("""
