@@ -14,13 +14,13 @@ file_path = base_path / "ppGpp_baza.xlsx"
 logo_path = base_path / "logo.jpg"
 
 @st.cache_data
-def load_data(path, _file_key):
+def load_data(path, file_key):
     """Load Excel data with cache invalidation on file changes."""
     return pd.read_excel(path)
 
 # Use file modification time as cache key to invalidate when file changes
 file_mtime = file_path.stat().st_mtime if file_path.exists() else 0
-df = load_data(file_path, _file_key=file_mtime)
+df = load_data(file_path, file_key=file_mtime)
 
 ppgpp_values = pd.to_numeric(df["ppGpp_mean"], errors="coerce").dropna()
 ppgpp_default_min = float(ppgpp_values.min()) if not ppgpp_values.empty else 0.0
